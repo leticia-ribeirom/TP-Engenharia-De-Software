@@ -24,5 +24,5 @@ async def remover_disciplina(disciplina_id: str):
 
     if resultado.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Disciplina não encontrada.")
-
+ 
     return {"msg": "Disciplina removida com sucesso."}
