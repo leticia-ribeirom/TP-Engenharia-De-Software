@@ -10,20 +10,25 @@ function LoginForm({ setActiveTab }) {
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
-
+  
     try {
       const response = await fetch('http://localhost:8000/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-
+  
       const data = await response.json();
-
+  
       if (!response.ok) {
         setErrorMessage(data.detail || 'Erro ao fazer login.');
       } else {
-        localStorage.setItem('username', data.username);
+        // Armazenar mais informações do usuário
+        localStorage.setItem('userData', JSON.stringify({
+          username: data.username,
+          userId: data.userId, 
+          email: data.email
+        }));
         navigate('/principal');
       }
     } catch (error) {

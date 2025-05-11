@@ -5,6 +5,7 @@ import Estatisticas from './componentsPrincipal/Estatisticas';
 import Configuracoes from './componentsPrincipal/Configuracoes';
 import Sidebar from './componentsPrincipal/SideBar';
 import "../css/Principal.css";
+import axios from "axios";
 
 function Principal() {
     const [username, setUsername] = useState('');
