@@ -267,195 +267,262 @@ const Estatisticas = () => {
                 )}
 
                 {/* Aba Disciplinas */}
-                {abaAtiva === 'disciplinas' && dadosGraficos.barras.length > 0 && (
-                    <div>
-                        <h2 className="text-xl font-semibold mb-4">Total de Notas por Disciplina</h2>
-                        <div style={{ height: '400px' }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart
-                                    data={dadosGraficos.barras}
-                                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                                >
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis 
-                                        dataKey="nome" 
-                                        angle={-45} 
-                                        textAnchor="end" 
-                                        height={70} 
+{abaAtiva === 'disciplinas' && dadosGraficos.barras.length > 0 && (
+    <div>
+        <h2 className="text-xl font-semibold mb-4">Total de Notas por Disciplina</h2>
+        
+        {/* Agrupar disciplinas por semestre */}
+        {Object.entries(
+            dadosGraficos.barras.reduce((acc, disciplina) => {
+                const semestre = disciplina.semestre;
+                if (!acc[semestre]) {
+                    acc[semestre] = [];
+                }
+                acc[semestre].push(disciplina);
+                return acc;
+            }, {})
+        )
+        .sort(([semestreA], [semestreB]) => {
+            if (semestreA === 'Sem semestre') return 1;
+            if (semestreB === 'Sem semestre') return -1;
+            
+            const [anoA, periodoA] = semestreA.split('/');
+            const [anoB, periodoB] = semestreB.split('/');
+            
+            if (anoB !== anoA) return anoB - anoA;
+            return periodoB - periodoA;
+        })
+        .map(([semestre, disciplinas]) => (
+            <div key={semestre} className="mb-8">
+                <h3 className="text-lg font-medium mb-2">{semestre}</h3>
+                <div style={{ height: '400px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                            data={disciplinas}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                        >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis 
+                                dataKey="nome" 
+                                angle={-45} 
+                                textAnchor="end" 
+                                height={70} 
+                            />
+                            <YAxis domain={[0, NOTA_MAXIMA]} />
+                            <Tooltip 
+                                formatter={(value, name, props) => [
+                                    `Total: ${value}/${NOTA_MAXIMA}`,
+                                    `Status: ${props.payload.status}`,
+                                    `Média: ${props.payload.media}`
+                                ]}
+                                labelFormatter={(label) => `Disciplina: ${label}`}
+                            />
+                            <Legend />
+                            <ReferenceLine 
+                                y={NOTA_MINIMA_APROVACAO} 
+                                label={{ value: `Mínimo ${NOTA_MINIMA_APROVACAO}`, position: 'insideTopRight' }} 
+                                stroke="red" 
+                                strokeDasharray="3 3" 
+                            />
+                            <Bar 
+                                dataKey="somaNotas" 
+                                name="Total" 
+                                barSize={30}
+                            >
+                                {disciplinas.map((entry, index) => (
+                                    <Cell 
+                                        key={`cell-${index}`} 
+                                        fill={entry.cor}
                                     />
-                                    <YAxis domain={[0, NOTA_MAXIMA]} />
-                                    <Tooltip 
-                                        formatter={(value, name, props) => [
-                                            `Total: ${value}/${NOTA_MAXIMA}`,
-                                            `Status: ${props.payload.status}`,
-                                            `Média: ${props.payload.media}`
-                                        ]}
-                                        labelFormatter={(label) => `Disciplina: ${label}`}
-                                    />
-                                    <Legend />
-                                    <ReferenceLine 
-                                        y={NOTA_MINIMA_APROVACAO} 
-                                        label={{ value: `Mínimo ${NOTA_MINIMA_APROVACAO}`, position: 'insideTopRight' }} 
-                                        stroke="red" 
-                                        strokeDasharray="3 3" 
-                                    />
-                                    <Bar 
-                                        dataKey="somaNotas" 
-                                        name="Total" 
-                                        barSize={30}
-                                    >
-                                        {dadosGraficos.barras.map((entry, index) => (
-                                            <Cell 
-                                                key={`cell-${index}`} 
-                                                fill={entry.cor}
-                                            />
-                                        ))}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                )}
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+        ))}
+    </div>
+)}
 
                 {/* Aba Distribuição */}
-                {abaAtiva === 'distribuicao' && dadosGraficos.pizzasPorDisciplina.length > 0 && (
-                    <div>
-                        <h2 className="text-xl font-semibold mb-4">Distribuição de Notas por Disciplina</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {dadosGraficos.pizzasPorDisciplina.map((disciplina, index) => (
-                                <div key={disciplina.disciplinaId} className="space-y-4">
-                                    <h3 className="text-lg font-medium">
-                                        {disciplina.disciplinaNome} 
-                                        <span className="ml-2 text-sm font-semibold">
-                                            (Total: {disciplina.somaNotas}/{NOTA_MAXIMA})
-                                        </span>
-                                        <span className={`ml-2 text-sm font-semibold ${
-                                            disciplina.status === 'Aprovado' ? 'text-green-600' :
-                                            disciplina.status === 'Em andamento' ? 'text-yellow-600' : 'text-red-600'
-                                        }`}>
-                                            {disciplina.status}
-                                        </span>
-                                    </h3>
-                                    <div style={{ height: '300px' }}>
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie
-                                                    data={disciplina.dados}
-                                                    cx="50%"
-                                                    cy="50%"
-                                                    outerRadius={80}
-                                                    innerRadius={40}
-                                                    paddingAngle={5}
-                                                    dataKey="value"
-                                                    nameKey="name"
-                                                    label={({ name, value }) => 
-                                                        `${name}: ${value}`
-                                                    }
-                                                >
-                                                    {disciplina.dados.map((entry, index) => (
-                                                        <Cell 
-                                                            key={`cell-${index}`} 
-                                                            fill={entry.fill || COLORS[index % COLORS.length]} 
-                                                        />
-                                                    ))}
-                                                </Pie>
-                                                <Tooltip 
-                                                    formatter={(value, name, props) => {
-                                                        const peso = props.payload.peso;
-                                                        return [
-                                                            `Nota: ${value}`,
-                                                            peso ? `Peso: ${peso}` : '',
-                                                            `Total: ${value * (peso || 1)}`
-                                                        ];
-                                                    }}
+{abaAtiva === 'distribuicao' && dadosGraficos.pizzasPorDisciplina.length > 0 && (
+    <div>
+        <h2 className="text-xl font-semibold mb-4">Distribuição de Notas por Disciplina</h2>
+        
+        {/* Agrupar disciplinas por semestre */}
+        {Object.entries(
+            dadosGraficos.pizzasPorDisciplina.reduce((acc, disciplina) => {
+                // Encontrar o semestre correspondente nos dados de barras
+                const semestre = dadosGraficos.barras.find(d => d.id === disciplina.disciplinaId)?.semestre || 'Sem semestre';
+                if (!acc[semestre]) {
+                    acc[semestre] = [];
+                }
+                acc[semestre].push(disciplina);
+                return acc;
+            }, {})
+        )
+        .sort(([semestreA], [semestreB]) => {
+            if (semestreA === 'Sem semestre') return 1;
+            if (semestreB === 'Sem semestre') return -1;
+            
+            const [anoA, periodoA] = semestreA.split('/');
+            const [anoB, periodoB] = semestreB.split('/');
+            
+            if (anoB !== anoA) return anoB - anoA;
+            return periodoB - periodoA;
+        })
+        .map(([semestre, disciplinas]) => (
+            <div key={semestre} className="mb-8">
+                <h3 className="text-lg font-medium mb-4">{semestre}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {disciplinas.map((disciplina, index) => (
+                        <div key={disciplina.disciplinaId} className="space-y-4">
+                            <h4 className="text-md font-medium">
+                                {disciplina.disciplinaNome} 
+                                <span className="ml-2 text-sm font-semibold">
+                                    (Total: {disciplina.somaNotas}/{NOTA_MAXIMA})
+                                </span>
+                                <span className={`ml-2 text-sm font-semibold ${
+                                    disciplina.status === 'Aprovado' ? 'text-green-600' :
+                                    disciplina.status === 'Em andamento' ? 'text-yellow-600' : 'text-red-600'
+                                }`}>
+                                    {disciplina.status}
+                                </span>
+                            </h4>
+                            <div style={{ height: '300px' }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={disciplina.dados}
+                                            cx="50%"
+                                            cy="50%"
+                                            outerRadius={80}
+                                            innerRadius={40}
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                            nameKey="name"
+                                            label={({ name, value }) => 
+                                                `${name}: ${value}`
+                                            }
+                                        >
+                                            {disciplina.dados.map((entry, index) => (
+                                                <Cell 
+                                                    key={`cell-${index}`} 
+                                                    fill={entry.fill || COLORS[index % COLORS.length]} 
                                                 />
-                                                <Legend />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-                            ))}
+                                            ))}
+                                        </Pie>
+                                        <Tooltip 
+                                            formatter={(value, name, props) => {
+                                                const peso = props.payload.peso;
+                                                return [
+                                                    `Nota: ${value}`,
+                                                    peso ? `Peso: ${peso}` : '',
+                                                    `Total: ${value * (peso || 1)}`
+                                                ];
+                                            }}
+                                        />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    ))}
+                </div>
+            </div>
+        ))}
+    </div>
+)}
 
-                {/* Aba Detalhes */}
-                {abaAtiva === 'detalhes' && (
-                    <div>
-                        <h2 className="text-xl font-semibold mb-4">Detalhes por Disciplina</h2>
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full">
-                                <thead>
-                                    <tr className="border-b">
-                                        <th className="text-left p-2">Semestre</th>
-                                        <th className="text-left p-2">Disciplina</th>
-                                        <th className="text-left p-2">Média</th>
-                                        <th className="text-left p-2">Total</th>
-                                        <th className="text-left p-2">Status</th>
-                                        <th className="text-left p-2">Notas</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {dadosGraficos.barras.length > 0 ? (
-                                        Object.entries(
-                                            dadosGraficos.barras.reduce((acc, disciplina) => {
-                                                const semestre = disciplina.semestre;
-                                                if (!acc[semestre]) {
-                                                    acc[semestre] = [];
-                                                }
-                                                acc[semestre].push(disciplina);
-                                                return acc;
-                                            }, {})
-                                        )
-                                        .sort(([semestreA], [semestreB]) => {
-                                            if (semestreA === 'Sem semestre') return 1;
-                                            if (semestreB === 'Sem semestre') return -1;
-                                            
-                                            const [anoA, periodoA] = semestreA.split('/');
-                                            const [anoB, periodoB] = semestreB.split('/');
-                                            
-                                            if (anoB !== anoA) return anoB - anoA;
-                                            return periodoB - periodoA;
-                                        })
-                                        .flatMap(([semestre, disciplinas]) => [
-                                            <tr key={`header-${semestre}`} className="bg-gray-50">
-                                                <td colSpan="6" className="p-2 font-semibold">
-                                                    {semestre}
-                                                </td>
-                                            </tr>,
-                                            ...disciplinas.map((disciplina, index) => (
-                                                <tr key={disciplina.id} className="border-b">
-                                                    <td className="p-2"></td>
-                                                    <td className="p-2">{disciplina.nome}</td>
-                                                    <td className="p-2">{disciplina.media}</td>
-                                                    <td className="p-2">{disciplina.somaNotas}/{NOTA_MAXIMA}</td>
-                                                    <td className="p-2">
-                                                        <span className={`font-semibold ${
-                                                            disciplina.status === 'Aprovado' ? 'text-green-600' :
-                                                            disciplina.status === 'Em andamento' ? 'text-yellow-600' : 'text-red-600'
-                                                        }`}>
-                                                            {disciplina.status}
-                                                        </span>
-                                                    </td>
-                                                    <td className="p-2">
-                                                        {dadosGraficos.pizzasPorDisciplina
-                                                            .find(d => d.disciplinaId === disciplina.id)?.dados.length || 0}
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        ])
-                                    ) : (
-                                        <tr>
-                                            <td colSpan="6" className="p-4 text-center text-gray-500">
-                                                Nenhuma disciplina cadastrada
+       {/* Aba Detalhes - Versão com Alinhamento Correto */}
+{abaAtiva === 'detalhes' && (
+    <div className="px-4 py-4 max-w-4xl mx-auto">
+        <h2 className="text-xl font-semibold mb-4 text-center">Detalhes por Disciplina</h2>
+        
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
+            <div className="overflow-x-auto">
+                <table className="w-full">
+                    <thead className="bg-gray-100">
+                        <tr>
+                            <th className="px-3 py-2 text-left text-sm font-medium text-gray-700 w-[40%]">Disciplina</th>
+                            <th className="px-2 py-2 text-left text-sm font-medium text-gray-700 w-[35%]">Progresso</th>
+                            <th className="px-2 py-2 text-left text-sm font-medium text-gray-700 w-[25%]">Status</th>
+                        </tr>
+                    </thead>
+                    
+                    <tbody className="divide-y divide-gray-200">
+                        {dadosGraficos.barras.length > 0 ? (
+                            Object.entries(
+                                dadosGraficos.barras.reduce((acc, disciplina) => {
+                                    const semestre = disciplina.semestre;
+                                    if (!acc[semestre]) {
+                                        acc[semestre] = {
+                                            disciplinas: [],
+                                            somaTotal: 0,
+                                            count: 0
+                                        };
+                                    }
+                                    acc[semestre].disciplinas.push(disciplina);
+                                    acc[semestre].somaTotal += disciplina.somaNotas;
+                                    acc[semestre].count++;
+                                    return acc;
+                                }, {})
+                            )
+                            .sort(([semestreA], [semestreB]) => {
+                                if (semestreA === 'Sem semestre') return 1;
+                                if (semestreB === 'Sem semestre') return -1;
+                                
+                                const [anoA, periodoA] = semestreA.split('/');
+                                const [anoB, periodoB] = semestreB.split('/');
+                                
+                                if (anoB !== anoA) return anoB - anoA;
+                                return periodoB - periodoA;
+                            })
+                            .flatMap(([semestre, {disciplinas, somaTotal, count}]) => {
+                                const nsg = count > 0 ? (somaTotal / count).toFixed(2) : 0;
+                                
+                                return [
+                                    <tr key={`header-${semestre}`} className="bg-blue-50 border-t-2 border-blue-100">
+                                        <td className="px-3 py-1 font-medium text-blue-800" colSpan="3">
+                                            <div className="flex justify-between">
+                                                <span>{semestre}</span>
+                                                <span className="font-normal">NSG: {nsg}</span>
+                                            </div>
+                                        </td>
+                                    </tr>,
+                                    ...disciplinas.map((disciplina) => (
+                                        <tr key={disciplina.id} className="hover:bg-gray-50">
+                                            <td className="px-3 py-2 text-sm text-gray-900">
+                                                {disciplina.nome}
+                                            </td>
+                                            <td className="px-2 py-2 text-sm text-gray-700">
+                                                {disciplina.somaNotas}/{NOTA_MAXIMA}
+                                            </td>
+                                            <td className="px-2 py-2">
+                                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                                    disciplina.status === 'Aprovado' ? 'bg-green-100 text-green-800' :
+                                                    disciplina.status === 'Em andamento' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
+                                                }`}>
+                                                    {disciplina.status}
+                                                </span>
                                             </td>
                                         </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
+                                    ))
+                                ];
+                            })
+                        ) : (
+                            <tr>
+                                <td colSpan="3" className="px-4 py-4 text-center text-gray-500">
+                                    Nenhuma disciplina cadastrada
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+)}
             </div>
         </div>
     );
