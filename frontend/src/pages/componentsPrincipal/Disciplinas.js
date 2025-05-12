@@ -21,7 +21,16 @@ function Disciplinas() {
     const [modoEdicaoAtividade, setModoEdicaoAtividade] = useState(false);
     const [indiceAtividadeEdicao, setIndiceAtividadeEdicao] = useState(null);
 
-    const userId = localStorage.getItem("user_id");
+    const userId = localStorage.getItem("email");
+
+    function ordenarDisciplinasPorSemestre(disciplinas) {
+        return disciplinas.slice().sort((a, b) => {
+            const [anoA, semA] = a.semestre.split('/').map(Number);
+            const [anoB, semB] = b.semestre.split('/').map(Number);
+            if (anoA !== anoB) return anoB - anoA; // ano decrescente
+            return semB - semA; // semestre decrescente
+        });
+    }
 
     useEffect(() => {
         if (!userId) return;
@@ -42,12 +51,11 @@ function Disciplinas() {
                         try {
                             const res = await fetch(`http://localhost:8000/grades/usuario/${userId}/disciplina/${disciplina._id}`);
                             const atividades = res.ok ? await res.json() : [];
-                            console.log("Atividades recebidas:", atividades);
-                            
+                                                        
                             return {
                                 ...disciplina,
                                 atividades: atividades.map((a) => ({
-                                    id: a.grade_id,
+                                    id: a.id,
                                     nome: a.tipo,
                                     nota: a.valor,
                                 })), 
@@ -59,7 +67,7 @@ function Disciplinas() {
                     })
                 );
 
-                setDisciplinas(disciplinasComAtividades);
+                setDisciplinas(ordenarDisciplinasPorSemestre(disciplinasComAtividades));
             } catch (error) {
                 console.error("Erro na requisição de disciplinas:", error);
             }
@@ -86,12 +94,12 @@ function Disciplinas() {
             const data = await response.json();
 
             if (response.ok) {
-                setDisciplinas([...disciplinas, {
+                setDisciplinas(ordenarDisciplinasPorSemestre([...disciplinas, {
                     _id: data.id,
                     nome: novaDisciplinaNome,
                     semestre: novaDisciplinaSemestre,
                     atividades: [],
-                }]);
+                }]));
 
                 // Resetar estados
                 setNovaDisciplinaNome("");
@@ -107,28 +115,46 @@ function Disciplinas() {
         }
     };
 
-    const editarDisciplina = (index) => {
-        const disc = disciplinas[index];
+    const editarDisciplina = (id) => {
+        const disc = disciplinas.find(d => d._id === id); // Buscar pela disciplina pelo _id
         setNovaDisciplinaNome(disc.nome);
         setNovaDisciplinaSemestre(disc.semestre);
-        setIndiceDisciplinaEdicao(index);
+        setIndiceDisciplinaEdicao(id); // Guardar o _id para futuras referências
         setModoEdicaoDisciplina(true);
         setMostrarModalDisciplina(true);
     };
 
-    const selecionarDisciplina = (index) => {
-        setDisciplinaSelecionada(index);
+    const selecionarDisciplina = (id) => {
+    if (mostrarModalDisciplina) {
+        setMostrarModalDisciplina(false);
+        setModoEdicaoDisciplina(false);
+        setIndiceDisciplinaEdicao(null);
+        setNovaDisciplinaNome("");
+        setNovaDisciplinaSemestre("");
+    }
+
+    const index = disciplinas.findIndex(d => d._id === id);
+        if (index !== -1) {
+            setDisciplinaSelecionada(index);
+        } else {
+            console.warn("Disciplina com ID não encontrada:", id);
+        }
     };
 
     const editarDisciplinaNoBanco = async () => {
-        const disciplinaId = disciplinas[indiceDisciplinaEdicao]._id;
+        const disciplina = disciplinas.find(d => d._id === indiceDisciplinaEdicao);
+        if (!disciplina) {
+            console.error("Disciplina não encontrada para edição.");
+            return;
+        }
+
         const dadosAtualizados = {
             nome: novaDisciplinaNome,
             semestre: novaDisciplinaSemestre,
         };
 
         try {
-            const response = await fetch(`http://localhost:8000/disciplinas/${disciplinaId}`, {
+            const response = await fetch(`http://localhost:8000/disciplinas/${disciplina._id}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json"
@@ -139,12 +165,10 @@ function Disciplinas() {
             const data = await response.json();
 
             if (response.ok) {
-                const novaLista = [...disciplinas];
-                novaLista[indiceDisciplinaEdicao] = {
-                    ...novaLista[indiceDisciplinaEdicao],
-                    ...dadosAtualizados
-                };
-                setDisciplinas(novaLista);
+                const novaLista = disciplinas.map(d => 
+                    d._id === disciplina._id ? { ...d, ...dadosAtualizados } : d
+                );
+                setDisciplinas(ordenarDisciplinasPorSemestre(novaLista));
                 // Resetar estados
                 setMostrarModalDisciplina(false);
                 setModoEdicaoDisciplina(false);
@@ -158,21 +182,20 @@ function Disciplinas() {
             console.error("Erro ao atualizar disciplina:", error);
         }
     };
-
-    const removerDisciplina = async (index) => {
-        const disciplinaId = disciplinas[index]._id;
-
+    const removerDisciplina = async (disciplinaId) => {
         try {
             const response = await fetch(`http://localhost:8000/disciplinas/${disciplinaId}`, {
                 method: "DELETE",
             });
 
             if (response.ok) {
-                const novaLista = [...disciplinas];
-                novaLista.splice(index, 1);
+                // Remover a disciplina pelo ID, não pelo índice
+                const novaLista = disciplinas.filter(disc => disc._id !== disciplinaId);
                 setDisciplinas(novaLista);
 
-                if (disciplinaSelecionada === index) setDisciplinaSelecionada(null);
+                if (disciplinaSelecionada && disciplinaSelecionada._id === disciplinaId) {
+                    setDisciplinaSelecionada(null);
+                }
             } else {
                 const data = await response.json();
                 alert(data.detail || "Erro ao remover disciplina.");
@@ -303,6 +326,15 @@ function Disciplinas() {
         ? disciplinas[disciplinaSelecionada].atividades.reduce((soma, atv) => soma + atv.nota, 0)
         : 0;
 
+    const disciplinasPorSemestre = disciplinas.reduce((acc, disc) => {
+        const semestre = disc.semestre || "Sem semestre definido";
+        if (!acc[semestre]) {
+            acc[semestre] = [];
+        }
+        acc[semestre].push(disc);
+        return acc;
+    }, 
+    {});
     return (
         <div className="relative flex flex-col min-h-screen">
             <div className="flex justify-between items-center p-4 border-b border-gray-200">
@@ -322,56 +354,64 @@ function Disciplinas() {
                         </div>
                     ) : (
                         <div className="space-y-2">
-                            {disciplinas.map((disc, idx) => (
-                                <div
-                                    key={idx}
-                                    className="bg-white p-3 rounded-md shadow-sm border hover:shadow-md transition-all cursor-pointer flex justify-between items-center"
-                                >
-                                    <div onClick={() => selecionarDisciplina(idx)} className="w-full">
-                                        <h4 className="font-medium">{disc.nome}</h4>
-                                        {disc.semestre && (
-                                            <span className="text-xs bg-blue-100 text-blue-700 py-1 px-2 rounded-full">
-                                                {disc.semestre}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="flex space-x-2">
-                                        <button
-                                            onClick={() => removerDisciplina(idx)}
-                                            style={{
-                                                backgroundColor: '#cd191c',
-                                                borderRadius: '10px',
-                                                padding: '1px',
-                                                cursor: 'pointer',
-                                            }}
-                                        >
-                                            <span
-                                                className="material-symbols-outlined"
-                                                style={{ color: '#fff', paddingTop: '4px', fontSize: '22px', fontVariationSettings: "'wght' 200"}}
-                                            >
-                                                delete
-                                            </span>
-                                        </button>
-                                        <button
-                                            onClick={() => editarDisciplina(idx)}
-                                            style={{
-                                                backgroundColor: '#19cd2b',
-                                                borderRadius: '10px',
-                                                padding: '1px',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            <span
-                                                className="material-symbols-outlined"
-                                                style={{ color: '#fff', paddingTop: '4px', fontSize: '22px', fontVariationSettings: "'wght' 200" }}
-                                            >
-                                                edit
-                                            </span>
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
+    {Object.entries(disciplinasPorSemestre).map(([semestre, lista]) => (
+        <div key={semestre} className="mb-4">
+            <h4 className="text-lg font-semibold mb-2 text-gray-800">{semestre}</h4>
+            <div className="space-y-2">
+                {lista.map((disc, idx) => (
+                    <div 
+                        key={disc._id}
+                        className="bg-white p-3 rounded-md shadow-sm border hover:shadow-md transition-all cursor-pointer flex justify-between items-center"
+                    >
+                        <div onClick={() => selecionarDisciplina(disc._id)} className="w-full">
+                            <h4 className="font-medium">{disc.nome}</h4>
+                            {disc.semestre && (
+                                <span className="text-xs bg-blue-100 text-blue-700 py-1 px-2 rounded-full">
+                                    {disc.semestre}
+                                </span>
+                            )}
                         </div>
+                        <div className="flex space-x-2">
+                            <button
+                                onClick={() => removerDisciplina(disc._id)}
+                                style={{
+                                    backgroundColor: '#cd191c',
+                                    borderRadius: '10px',
+                                    padding: '1px',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                <span
+                                    className="material-symbols-outlined"
+                                    style={{ color: '#fff', paddingTop: '4px', fontSize: '22px', fontVariationSettings: "'wght' 200" }}
+                                >
+                                    delete
+                                </span>
+                            </button>
+                            <button
+                                onClick={() => editarDisciplina(disc._id)}
+                                style={{
+                                    backgroundColor: '#19cd2b',
+                                    borderRadius: '10px',
+                                    padding: '1px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <span
+                                    className="material-symbols-outlined"
+                                    style={{ color: '#fff', paddingTop: '4px', fontSize: '22px', fontVariationSettings: "'wght' 200" }}
+                                >
+                                    edit
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    ))}
+</div>
+
                     )}
                     
                     {/* Botão no final */}
@@ -391,7 +431,10 @@ function Disciplinas() {
                         <div className="flex items-center gap-2">
                             <button
                                 className="text-gray-600 hover:text-gray-800"
-                                onClick={() => setDisciplinaSelecionada(null)}
+                                onClick={() => {
+                                    setDisciplinaSelecionada(null)
+                                    setMostrarModalAtividade(false);
+                                }}
                             >
                                 <span className="material-symbols-outlined">arrow_back</span>
                             </button>

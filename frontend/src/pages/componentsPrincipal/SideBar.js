@@ -1,8 +1,8 @@
 import React from 'react';
 
 function Sidebar({ handleTabChange, handleLogout }) {
-    const icons = ['home', 'menu_book', 'bar_chart', 'settings', 'logout'];
-    const labels = ['Página Inicial', 'Disciplinas', 'Estatísticas', 'Configurações', 'Sair'];
+    const icons = ['menu_book', 'bar_chart', 'settings', 'logout'];
+    const labels = ['Disciplinas', 'Estatísticas', 'Configurações', 'Sair'];
 
     return (
         <div className="bg-[#1919CD] text-white w-64 p-6 transition-all duration-300 shadow-lg">

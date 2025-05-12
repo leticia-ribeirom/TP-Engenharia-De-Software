@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import PaginaInicial from './componentsPrincipal/PaginaInicial';
 import Disciplinas from './componentsPrincipal/Disciplinas';
 import Estatisticas from './componentsPrincipal/Estatisticas';
 import Configuracoes from './componentsPrincipal/Configuracoes';
@@ -9,7 +8,7 @@ import "../css/Principal.css";
 
 function Principal() {
     const [username, setUsername] = useState('');
-    const [selectedPage, setSelectedPage] = useState('Página Inicial');
+    const [selectedPage, setSelectedPage] = useState('Disciplinas');
     const navigate = useNavigate();  // Adicionei o hook de navegação
 
     useEffect(() => {
@@ -25,7 +24,7 @@ function Principal() {
 
     const handleLogout = async () => {
         try {
-            const token = localStorage.getItem('access_token')
+            const token = localStorage.getItem('access_token');
             
             const response = await fetch('http://localhost:8000/logout', {
                 method: 'POST',
@@ -58,8 +57,7 @@ function Principal() {
                 <div className="flex-1 p-8">
                     <header className="mb-8 flex justify-between items-center">
                         <h1 className="text-3xl font-bold text-gray-800">
-                            {selectedPage === 'Página Inicial' && 'Bem-vindo, ' + username + '!'}
-                            {selectedPage === 'Disciplinas' && 'Disciplinas'}
+                            {selectedPage === 'Disciplinas' && 'Bem-vindo, ' + username + '!'}
                             {selectedPage === 'Estatísticas' && 'Estatísticas'}
                             {selectedPage === 'Configurações' && 'Configurações'}
                         </h1>
@@ -73,7 +71,6 @@ function Principal() {
                         </div>
                     </header>
                     {/* Exibindo o conteúdo baseado no selectedPage */}
-                    {selectedPage === 'Página Inicial' && <PaginaInicial />}
                     {selectedPage === 'Disciplinas' && <Disciplinas />}
                     {selectedPage === 'Estatísticas' && <Estatisticas />}
                     {selectedPage === 'Configurações' && <Configuracoes />}

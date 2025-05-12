@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, Field
 from typing import Optional
 from datetime import datetime
 from bson import ObjectId
+from pydantic import validator
 
 class Grade(BaseModel):
     id: Optional[str] = Field(default_factory=lambda: str(ObjectId()))  # Gerar id automaticamente
@@ -22,6 +23,12 @@ class Grade(BaseModel):
         d = super().dict(*args, **kwargs)
         d["id"] = str(d["id"])  # Garantir que o id seja sempre uma string
         return d
+    
+    @validator('valor')
+    def validar_valor(cls, v):
+        if v < 0:
+            raise ValueError('O valor da nota deve ser maior ou igual a 0.')
+        return v
     
 class GradeUpdate(BaseModel):
     valor: Optional[float]  # Somente campos que podem ser atualizados
