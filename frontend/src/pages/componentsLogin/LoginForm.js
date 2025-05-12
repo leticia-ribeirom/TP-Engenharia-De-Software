@@ -1,35 +1,37 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link,useNavigate } from 'react-router-dom';
 
 function LoginForm({ setActiveTab }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+
   const navigate = useNavigate();
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
-  
+
     try {
       const response = await fetch('http://localhost:8000/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-  
+
       const data = await response.json();
-  
+
       if (!response.ok) {
         setErrorMessage(data.detail || 'Erro ao fazer login.');
       } else {
-        // Armazenar mais informações do usuário
-        localStorage.setItem('userData', JSON.stringify({
-          username: data.username,
-          userId: data.userId, 
-          email: data.email
-        }));
-        navigate('/principal');
+        console.log("Resposta da API:", data);
+        if (data.username && data.email) {
+            localStorage.setItem('username', data.username);
+            localStorage.setItem('email', data.email);
+        } else {
+            console.error("Erro: username ou email não retornado pela API");
+        }
+        navigate('/principal'); // Redireciona para a página principal
       }
     } catch (error) {
       setErrorMessage('Erro na conexão com o servidor.');

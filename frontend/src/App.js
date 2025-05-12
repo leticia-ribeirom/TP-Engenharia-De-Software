@@ -3,8 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './pages/AuthPages';
 import Principal from './pages/Principal'; // Importar a página Principal
 import VerifyCode from './pages/VerifyCode';
-import ResetPassword from './pages/ResetPassword';
-
+import ResetPassword from './pages/ResetPassword'; 
 
 function App() {
   return (
